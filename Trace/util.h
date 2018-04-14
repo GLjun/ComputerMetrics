@@ -24,7 +24,7 @@
                         exit(0);}
 
 #define MARK_TIME(t) gettimeofday(&t, NULL)
-#define DIFF_TIME(ts, tt) (((tt).tv_sec-(ts).tv_sec) + ((tt).tv_usec*1e-6 - (ts).tv_usec*1e-6))
+#define DIFF_TIME(tt, ts) (((tt).tv_sec-(ts).tv_sec) + ((tt).tv_usec*1e-6 - (ts).tv_usec*1e-6))
 
 typedef struct timeval TIME_T;
 

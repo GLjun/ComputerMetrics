@@ -4,7 +4,7 @@
 	> Mail: 
 	> Created Time: 五  4/13 16:59:22 2018
  ************************************************************************/
-
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <sys/types.h>
 #include <dlfcn.h>
