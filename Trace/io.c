@@ -17,10 +17,10 @@ extern "C" {
 #define MAX_FUNC_NAME_LEN 128
 
 ssize_t read(int fd, void* buf, size_t count) {
-    static void * (*fptr)() = NULL;
+    static ssize_t (*fptr)(int, void*, size_t) = NULL;
 
     if(fptr == NULL) {
-        fptr = (void *(*)())dlsym(RTLD_NEXT, "read");
+        fptr = (ssize_t (*)(int, void*, size_t))dlsym(RTLD_NEXT, "read");
         CHECK(fptr != NULL);
     }
     TIME_T ts, tt;
@@ -32,10 +32,10 @@ ssize_t read(int fd, void* buf, size_t count) {
 }
 
 ssize_t write(int fd, void* buf, size_t count) {
-    static void * (*fptr)() = NULL;
+    static ssize_t (*fptr)(int, void*, size_t) = NULL;
 
     if(fptr == NULL) {
-        fptr = (void *(*)())dlsym(RTLD_NEXT, "write");
+        fptr = (ssize_t (*)(int, void*, size_t))dlsym(RTLD_NEXT, "write");
         CHECK(fptr != NULL);
     }
     TIME_T ts, tt;
