@@ -15,16 +15,34 @@
 #include <unistd.h>
 #include "util.h"
 
-int main()
+void test_by_read()
 {
     int fd = open("data.txt", O_RDONLY);
 
     CHECK(fd != -1);
     char buf[256];
     ssize_t size = read(fd, buf, 256);
+    write(fd, buf, 256);
     LOG("%d", size);
     LOGINFO(buf);
     close(fd);
+}
+
+void test_by_file()
+{
+    FILE* file = fopen("data.txt", "r");
+    char line[256];
+    fgets(line, 256, file);
+    fputs(line, stdout);
+    fclose(file);
+}
+
+int main()
+{
+    test_by_read();
+    test_by_file();
+    printf("helo\n");
+ 
     return 0;
 }
 
