@@ -53,7 +53,14 @@
 
 #ifdef PAPI_PERF
 #include "papi.h"
-#include "util.h"
+
+#define LOG(format, ...) printf("[%s, %s:%d %s] " format "\n", \
+                        __TIME__, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+
+#define CHECK(flag) if(!(flag)) { \
+                        printf("[%s, %s:%d %s] check failure!!!\n",\
+                        __TIME__, __FILE__, __LINE__, __FUNCTION__);\
+                        exit(0);}
 #endif
 
 
@@ -439,18 +446,37 @@ int main(int argc,char **argv)
 {
 
 #ifdef PAPI_PERF
-    CHECK(PAPI_library_init(PAPI_VER_CURRENT) != PAPI_VER_CURRENT);
+    CHECK(PAPI_library_init(PAPI_VER_CURRENT) == PAPI_VER_CURRENT);
+    CHECK(PAPI_multiplex_init() == PAPI_OK);
+
     int EventSet = PAPI_NULL;
-    CHECK(PAPI_create_eventset(&EventSet) != PAPI_OK);
+    long long values1[3], values2[3];
+    CHECK(PAPI_create_eventset(&EventSet) == PAPI_OK);
 
-    CHECK(PAPI_add_event(EventSet, PAPI_TOT_INS) != PAPI_OK);
-    CHECK(PAPI_add_event(EventSet, PAPI_TOT_CYC) != PAPI_OK);
 
-    CHECK(PAPI_add_event(EventSet, PAPI_L1_TCM) != PAPI_OK);
-    CHECK(PAPI_add_event(EventSet, PAPI_L1_TCH) != PAPI_OK);
-    CHECK(PAPI_add_event(EventSet, PAPI_L2_TCM) != PAPI_OK);
-    CHECK(PAPI_add_event(EventSet, PAPI_L2_TCH) != PAPI_OK);
-    CHECK(PAPI_add_event(EventSet, PAPI_TLB_TL) != PAPI_OK);
+#if defined(IPC)
+    CHECK(PAPI_add_event(EventSet, PAPI_TOT_INS) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_TOT_CYC) == PAPI_OK);
+#elif defined(L1)
+    CHECK(PAPI_add_event(EventSet, PAPI_L1_TCM) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_LST_INS) == PAPI_OK);
+#elif defined(L2)
+    CHECK(PAPI_add_event(EventSet, PAPI_L2_LDM) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_L2_STM) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_L1_TCM) == PAPI_OK);
+    CHECK(PAPI_set_multiplex(EventSet) == PAPI_OK);
+#elif defined(TLB)
+    CHECK(PAPI_add_event(EventSet, PAPI_TLB_DM) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_TLB_IM) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_LST_INS) == PAPI_OK);
+    CHECK(PAPI_set_multiplex(EventSet) == PAPI_OK);
+#elif defined(BR)
+    CHECK(PAPI_add_event(EventSet, PAPI_BR_MSP) == PAPI_OK);
+    CHECK(PAPI_add_event(EventSet, PAPI_BR_CN) == PAPI_OK);
+#endif
+
+    CHECK(PAPI_start(EventSet) == PAPI_OK);
+    CHECK(PAPI_read(EventSet, values1) == PAPI_OK);
 
 #endif
 
@@ -519,6 +545,35 @@ int main(int argc,char **argv)
   pi += (u64)count_zero_bits((u08 *)main_sieve,i);
   t = ((double)clock() - t) / (double)CLOCKS_PER_SEC;
   printf(" %7.2f %8llu\n",t,pi);
+
+
+#ifdef PAPI_PERF
+
+    CHECK(PAPI_stop(EventSet, values2) == PAPI_OK);
+    CHECK(PAPI_cleanup_eventset(EventSet) == PAPI_OK);
+    CHECK(PAPI_destroy_eventset(&EventSet) == PAPI_OK);
+    PAPI_shutdown();
+
+    long long v0 = values2[0] - values1[0];
+    long long v1 = values2[1] - values1[1];
+    long long v2 = values2[2] - values1[2];
+    //LOG("%llu %llu %llu %llu", values1[0], values1[1], values2[0], values2[1]);
+
+#if defined(IPC)
+    LOG("IPC: %.3f", (double)v0/v1);
+#elif defined(L1)
+    LOG("L1 miss rate: %.3f %", (double)v0/v1 * 100.0);
+#elif defined(L2)
+    LOG("L2 miss rate: %.3f %", (1.0 - (double)(v0+v1)/v2) * 100.0);
+#elif defined(TLB)
+    LOG("TLB miss rate: %.3f %", (double)(v0+v1)/v2 * 100.0);
+#elif defined(BR)
+    LOG("Branch miss rate: %.3f %", (double)v0/v1 * 100.0);
+#endif
+    
+
+#endif
+
   return 0;
 }
 
